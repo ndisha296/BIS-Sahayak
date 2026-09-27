@@ -1,0 +1,29 @@
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+python-dotenv==1.0.1
+pydantic==2.9.2
+sqlalchemy==2.0.35
+
+# Vector store + embeddings (local, free, CPU/GPU both fine)
+chromadb==0.5.5
+sentence-transformers==3.1.1
+
+# LLM API clients (pick whichever key you set in .env)
+groq==0.11.0
+google-generativeai==0.8.3
+openai==1.51.0          # also works for OpenRouter (same SDK, different base_url)
+
+# OCR + image pipeline (GPU-accelerated, fits 8GB VRAM)
+easyocr==1.7.1
+opencv-python==4.10.0.84
+Pillow==10.4.0
+
+# Object detection for locating the hallmark region
+ultralytics==8.3.20
+
+# Auth
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+
+# Scheduled renewal reminders
+apscheduler==3.10.4
