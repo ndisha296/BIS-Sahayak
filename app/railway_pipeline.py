@@ -123,30 +123,39 @@ groq_client = OpenAI(
     api_key=GROQ_API_KEY or "missing_key"
 )
 
+SAFE_TOOL_CAPABLE_MODELS = [
+    os.getenv("GROQ_MODEL", "qwen/qwen3.8-27b"),
+    "qwen/qwen3.8-27b",
+    "openai/gpt-oss-120b",
+    "openai/gpt-oss-20b",
+    "llama-3.3-70b-versatile",
+    "llama-3.1-8b-instant"
+]
+
 def get_best_available_groq_model() -> str:
-    """Queries Groq API to select an active model that supports tool calling."""
-    TOOL_CAPABLE_MODELS = [
-        "llama-3.3-70b-versatile",
-        "llama-3.1-8b-instant",
-        "llama-3.1-70b-versatile",
-        "llama3-70b-8192",
-        "llama3-8b-8192",
-        "mixtral-8x7b-32768"
-    ]
+    """Queries Groq API to select an active model that supports tool calling without gated terms restrictions."""
+    EXCLUDE_PATTERNS = ["canopylabs", "orpheus", "guard", "whisper", "embed", "tts", "vision", "voice"]
+
     try:
         models_data = groq_client.models.list()
         available_ids = {m.id for m in models_data.data}
-        for model_id in TOOL_CAPABLE_MODELS:
+        
+        # 1. First check against prioritized safe list
+        for model_id in SAFE_TOOL_CAPABLE_MODELS:
             if model_id in available_ids:
                 return model_id
 
-        fallback = [mid for mid in available_ids if "whisper" not in mid and "embed" not in mid]
-        if fallback:
-            return fallback[0]
+        # 2. Filter out all non-chat and restricted models
+        filtered = [
+            mid for mid in available_ids 
+            if not any(pat in mid.lower() for pat in EXCLUDE_PATTERNS)
+        ]
+        if filtered:
+            return filtered[0]
     except Exception as e:
         print(f"[!] Warning discovering Groq models: {e}")
 
-    return "llama-3.1-8b-instant"
+    return "qwen/qwen3.8-27b"
 
 RESOLVED_MODEL_NAME = get_best_available_groq_model()
 print(f"[*] Verified Groq model connected: {RESOLVED_MODEL_NAME}")
