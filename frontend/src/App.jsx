@@ -11,6 +11,7 @@ import Standards from './pages/Standards';
 import Quotation from './pages/Quotation';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import Assistant from './pages/Assistant';
 import { Shield, ExternalLink, Award, Sparkles, CheckCircle2 } from 'lucide-react';
 
 export default function App() {
@@ -28,6 +29,8 @@ export default function App() {
               <Route path="/" element={<Login />} />
               <Route path="/home" element={<Home />} />
               <Route path="/verify" element={<Verify />} />
+              <Route path="/assistant" element={<Assistant />} />
+              <Route path="/ai-assistant" element={<Assistant />} />
               <Route path="/standards" element={<Standards />} />
               <Route path="/quotation" element={<Quotation />} />
               <Route path="/recommend-standard" element={<Standards />} />

@@ -101,6 +101,13 @@ export default function Navbar() {
         <nav>
           <ul className="nav-links">
             <li>
+              <Link to="/assistant" className={`nav-link ${location.pathname === '/assistant' || location.pathname === '/ai-assistant' ? 'active' : ''}`}>
+                <Sparkles size={17} color="var(--sage)" />
+                <span>{t('nav_assistant')}</span>
+                <span className="nav-persona-badge badge-consumer" style={{ background: 'rgba(74, 124, 89, 0.15)', color: 'var(--sage-dark)', border: '1px solid rgba(74, 124, 89, 0.3)' }}>{t('nav_ai_badge')}</span>
+              </Link>
+            </li>
+            <li>
               <Link to="/verify" className={`nav-link ${location.pathname === '/verify' ? 'active' : ''}`}>
                 <Award size={17} />
                 <span>{t('nav_hallmark')}</span>
@@ -109,7 +116,7 @@ export default function Navbar() {
             </li>
             <li>
               <Link to="/standards" className={`nav-link ${location.pathname === '/standards' ? 'active' : ''}`}>
-                <Sparkles size={17} />
+                <Shield size={17} />
                 <span>{t('nav_standards')}</span>
               </Link>
             </li>
@@ -166,12 +173,16 @@ export default function Navbar() {
             <Globe size={15} />
             <span>Language: {currentLang === 'hi' ? 'हिन्दी (Hindi)' : 'English'}</span>
           </button>
+          <Link to="/assistant" className="nav-link" onClick={() => setMobileMenuOpen(false)}>
+            <Sparkles size={18} color="var(--sage)" />
+            <span>{t('nav_assistant')}</span>
+          </Link>
           <Link to="/verify" className="nav-link" onClick={() => setMobileMenuOpen(false)}>
             <Award size={18} />
             <span>{t('nav_hallmark')}</span>
           </Link>
           <Link to="/standards" className="nav-link" onClick={() => setMobileMenuOpen(false)}>
-            <Sparkles size={18} />
+            <Shield size={18} />
             <span>{t('nav_standards')}</span>
           </Link>
           <Link to="/quotation" className="nav-link" onClick={() => setMobileMenuOpen(false)}>
