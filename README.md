@@ -1,78 +1,309 @@
-# BIS Assistant - Backend Scaffold
+# BIS Sahayak (बी.आई.एस. सहायक) 🛡️🇮🇳
+### Intelligent AI Compliance Co-Pilot & Hallmark Verification Portal for the Bureau of Indian Standards
 
-A guided (not generic) assistant: structured product->standard lookup first,
-RAG chat for open questions, and consumer-side hallmark HUID verification.
+[![Python](https://img.shields.io/badge/Python-3.11%2B-blue.svg?logo=python)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-1.0.0-009688.svg?logo=fastapi)](https://fastapi.tiangolo.com)
+[![React](https://img.shields.io/badge/React-19.0-61DAFB.svg?logo=react)](https://react.dev)
+[![Vite](https://img.shields.io/badge/Vite-6.1-646CFF.svg?logo=vite)](https://vitejs.dev)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?logo=docker)](https://www.docker.com)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-## Setup (Windows/Linux, tested against an 8GB VRAM GPU like the RTX 5050)
+---
+
+## 📌 Overview
+
+**BIS Sahayak** is a full-stack, AI-powered compliance co-pilot and regulatory assistance portal built for Indian manufacturers, MSMEs, startups, and consumers navigating the **Bureau of Indian Standards (BIS)** ecosystem.
+
+Navigating Indian technical standards (**IS numbers**), mandatory Quality Control Orders (**QCOs**), product certification schemes (**ISI Mark Scheme I**, **CRS Scheme II**, **FMCS**), Gold **HUID Hallmarking**, testing lab directories (**OSL**), and license renewals (**Form IX**) can be complex and fragmented. 
+
+**BIS Sahayak** unifies these workflows into a modern, bilingual (English & Hindi) platform combining Retrieval-Augmented Generation (RAG), Computer Vision (OCR & Object Detection), automated compliance cost calculation, quotation generation, and real-time license lifecycle tracking.
+
+---
+
+## 🌟 Key Features
+
+### 1. 🤖 Multilingual AI Regulatory Assistant (RAG Pipeline)
+- **Bilingual Conversations**: Seamlessly interact in English, Hindi (हिन्दी), or Hinglish.
+- **RAG Architecture**: Retrieves authoritative context from ingested Indian Standards (IS texts), BIS Act 2016 guidelines, and Manakonline gazettes.
+- **Strict Regulatory Citations**: Every response cites exact standards (e.g., `[Source: IS 16046]`, `[Source: Form IX Guidelines]`).
+- **Resilient Multi-Provider Cascade**: Automatically routes queries through configured LLMs with automated fallback to an embedded domain regulatory engine.
+
+### 2. 🔍 Product-to-Standard & OSL Lab Discovery
+- **Smart Standard Matcher**: Maps raw product keywords (e.g., *"lithium-ion battery"*, *"cement"*, *"packaged drinking water"*) to official **IS Standards** and applicable schemes (ISI vs. CRS vs. Hallmarking).
+- **Testing Facilities Directory**: Search BIS-recognized **Off-Site Laboratories (OSL)**, approved testing scopes, validity dates, and official fee schedules.
+
+### 3. 💰 Cost & Quotation Engine with MSME Concessions
+- **Dynamic Fee Breakdown**: Calculates application fees, factory audit charges, lab test fees, and annual marking fees.
+- **MSME 50% Subsidy Support**: Automatically computes government concessions for Udyam-registered startups and MSMEs.
+- **Instant Quotation Generation**: Generates persistent quote references (`BIS-QTE-XXXXX`) for enterprise compliance budgeting.
+
+### 4. 💎 Gold Hallmark & 6-Digit HUID Verification
+- **Dual-Mode Verification**: Verify laser-engraved 6-character alphanumeric **HUID** codes either via typed input or direct photo upload.
+- **Computer Vision OCR**: Uses **EasyOCR** and optional **YOLOv8** bounding-box localization to detect and parse micro-engravings on rings, bangles, and chains.
+- **Purity & Registry Cross-Check**: Validates 24K (999), 22K (916), 18K (750), and 14K (585) claimed purities against the registry.
+
+### 5. 📊 MSME & Startup Compliance Dashboard
+- **License Lifecycle Tracking**: Track active ISI licenses, CRS registrations, and Hallmark certifications.
+- **3-Tier Expiry Reminder Engine**: Visual countdown alerts at **90 Days**, **60 Days**, and **30 Days (Urgent)** with guided Form IX renewal checklists.
+- **Dual Storage & Cloud Sync**: Local SQLite database paired with automated cloud sync to Supabase PostgreSQL.
+
+---
+
+## 🧠 AI & Machine Learning Models Used
+
+| Model / Framework | Purpose / Domain | Deployment Mode |
+| :--- | :--- | :--- |
+| **Llama 3.3 (70B Versatile)** | Primary High-Intelligence LLM for RAG QA & bilingual reasoning via Groq | Cloud API (Groq) |
+| **Llama 3.1 (8B Instruct)** | Lightweight, cost-efficient LLM fallback via OpenRouter | Cloud API (OpenRouter) |
+| **Grok 2 / Gemini 2.0 Flash** | Alternative high-speed multimodal reasoning engines | Cloud API (xAI / Google) |
+| **Sentence-Transformers (`all-MiniLM-L6-v2`)** | 384-dimensional dense vector embeddings for IS standards retrieval | Local (CPU / CUDA) |
+| **ChromaDB** | Embedded Vector Store for semantic chunk retrieval | Local Persistence |
+| **EasyOCR / PaddleOCR** | Optical Character Recognition for micro-engraved 6-digit HUIDs | Local (CPU / CUDA GPU) |
+| **YOLOv8n (`ultralytics`)** | Custom trained object detector to crop hallmark regions on jewellery | Local (`best.pt` weights) |
+| **Local Domain Fallback Engine** | Deterministic, citation-rich expert knowledge engine when offline | Local Python Runtime |
+
+---
+
+## 🏗️ System Architecture
+
+```
+                                  +---------------------------------------+
+                                  |    React 19 + Vite Frontend (UI)      |
+                                  | (Dashboard, HUID OCR, Chat, Schemes)  |
+                                  +-------------------+-------------------+
+                                                      |  HTTP / REST
+                                                      v
++-------------------------------------------------------------------------------------------------+
+|                                    FastAPI Backend (Port 8000)                                  |
+|                                                                                                 |
+|   +-------------------+   +--------------------+   +--------------------+   +---------------+   |
+|   |  Auth & Profile   |   |   Standards & OSL  |   |  Cost / Quotation  |   | HUID Hallmark |   |
+|   |   (JWT + MSME)    |   |     Directory      |   |     Calculator     |   | OCR Pipeline  |   |
+|   +---------+---------+   +---------+----------+   +---------+----------+   +-------+-------+   |
+|             |                       |                        |                      |           |
+|             v                       v                        v                      v           |
+|   +-----------------------------------------------------------------------------+   | EasyOCR   |
+|   |                   Database Layer (SQLite / Supabase Postgres)               |   | YOLOv8    |
+|   +-----------------------------------------------------------------------------+   +-----------+
+|                                                      |                                          |
+|   +--------------------------------------------------+--------------------------------------+   |
+|   |                       RAG Regulatory Knowledge Engine (rag.py)                          |   |
+|   |                                                                                         |   |
+|   |   +------------------------+      +---------------------+      +--------------------+   |   |
+|   |   | Sentence-Transformers  | ---> | Chroma Vector Store | ---> | Groq / OpenRouter  |   |   |
+|   |   |   (all-MiniLM-L6-v2)   |      |  (IS Standards DB)  |      |   xAI / Gemini LLM |   |   |
+|   |   +------------------------+      +---------------------+      +--------------------+   |   |
++---|-----------------------------------------------------------------------------------------|---+
+```
+
+---
+
+## 💻 Tech Stack
+
+- **Backend**: Python 3.11+, FastAPI, SQLAlchemy, Pydantic v2, Uvicorn, PyJWT.
+- **Frontend**: React 19, Vite, Tailwind-compatible modern CSS, Lucide Icons, Axios, i18next, Canvas Confetti.
+- **Database**: SQLite (local) + Supabase (PostgreSQL Cloud Sync).
+- **AI / Embeddings**: ChromaDB, Sentence-Transformers, Groq SDK / REST APIs, xAI Grok, Google Gemini.
+- **Vision / OCR**: PyTorch, Torchvision, OpenCV, EasyOCR, Ultralytics YOLOv8.
+- **DevOps**: Docker, Multi-stage Dockerfile, Docker Compose, Nginx.
+
+---
+
+## 🚀 Getting Started (Local Setup)
+
+### Prerequisites
+- **Python 3.10+** (Python 3.11 or 3.12 recommended)
+- **Node.js 18+** & `npm`
+- **Git**
+
+### Step 1: Clone the Repository
+```bash
+git clone https://github.com/ndisha296/BIS-Sahayak.git
+cd BIS-Sahayak
+```
+
+### Step 2: Configure Environment Variables
+Copy `.env.example` to `.env`:
+```bash
+cp .env.example .env
+```
+
+Edit `.env` and set your preferred LLM provider and API key:
+```env
+# Choose provider: groq | openrouter | gemini | xai
+LLM_PROVIDER=groq
+
+# API Keys (at least one is required for live LLM responses)
+GROQ_API_KEY=your_groq_api_key_here
+GROQ_MODEL=llama-3.3-70b-versatile
+
+OPENROUTER_API_KEY=your_openrouter_api_key_here
+OPENROUTER_MODEL=meta-llama/llama-3.1-8b-instruct:free
+
+GEMINI_API_KEY=your_gemini_api_key_here
+GEMINI_MODEL=gemini-2.0-flash
+
+# Auth & Database
+JWT_SECRET=your-secure-random-secret-key
+DATABASE_URL=sqlite:///./bis_assistant.db
+CHROMA_PERSIST_DIR=./chroma_store
+```
+
+---
+
+### Step 3: Set Up and Start Backend Server
 
 ```bash
+# 1. Create and activate virtual environment
 python -m venv venv
-venv\Scripts\activate          # or: source venv/bin/activate on Linux/Mac
+
+# Windows (PowerShell / Command Prompt)
+venv\Scripts\activate
+
+# Linux / macOS
+source venv/bin/activate
+
+# 2. Install Python dependencies
 pip install -r requirements.txt
-cp .env.example .env           # then fill in ONE free API key (see below)
+
+# 3. (Optional) Seed demo standards, labs, and mock HUIDs
+python seed_data.py
+
+# 4. Launch FastAPI server
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
+- Interactive API Docs (Swagger UI): **http://127.0.0.1:8000/docs**
+- Health Check: **http://127.0.0.1:8000/health**
 
-## Get a free LLM API key (pick one, set LLM_PROVIDER in .env to match)
+---
 
-- **Groq** (recommended - fast, generous free tier): https://console.groq.com
-- **Google AI Studio (Gemini)**: https://aistudio.google.com/app/apikey
-- **OpenRouter** (free models available): https://openrouter.ai/keys
+### Step 4: Set Up and Start Frontend Portal
 
-No key costs money at these free tiers. No GPU needed for the LLM call itself
-since it runs on the provider's servers - your 5050 is only doing local
-embeddings + OCR + detection.
-
-## Seed demo data and run
-
+In a new terminal window:
 ```bash
-python seed_data.py     # loads sample product-standard rows, mock HUID registry, RAG docs
-uvicorn app.main:app --reload
+cd frontend
+
+# Install Node dependencies
+npm install
+
+# Start Vite development server
+npm run dev
+```
+- Open your browser at: **http://localhost:5173**
+
+---
+
+## 🐳 Docker & Docker Compose Deployment
+
+BIS Sahayak is fully containerized for one-command deployment of both backend and frontend services.
+
+### Run with Docker Compose
+```bash
+# Build and launch both Backend (port 8000) and Frontend (port 5173 / 80)
+docker compose up --build -d
 ```
 
-Visit http://127.0.0.1:8000/docs for interactive Swagger UI to test all
-three endpoints immediately.
+### View Logs
+```bash
+# Check combined logs
+docker compose logs -f
 
-## Endpoints
+# Check backend logs only
+docker compose logs -f backend
+```
 
-- `POST /chat` - `{"question": "..."}` -> RAG answer with citations
-- `POST /recommend-standard` - `{"description": "power bank"}` -> structured match or RAG fallback
-- `POST /verify-hallmark` - multipart file upload (jewellery photo) -> HUID read + registry lookup
+### Seed Data in Container
+```bash
+docker compose exec backend python seed_data.py
+```
 
-## Local model notes for an 8GB VRAM GPU (RTX 5050)
+### Stop Containers
+```bash
+docker compose down
+```
 
-- `sentence-transformers/all-MiniLM-L6-v2` (embeddings) - trivial load, runs fine even on CPU.
-- `EasyOCR` - GPU-accelerated by default (`gpu=True` in `ocr_service.py`); comfortably fits 8GB.
-- If you later add a `YOLOv8n` detector to crop the hallmark region before OCR
-  (recommended once you have a labeled dataset), it trains and infers fine on 8GB.
-- Keep the chat LLM on a free API (Groq/Gemini/OpenRouter) rather than local -
-  an 8GB card can technically run a 4-bit 7-8B model via Ollama, but response
-  quality and demo reliability are much better on the free hosted APIs.
+---
 
-## Training the hallmark-region detector (optional but recommended)
+## 📖 API Reference & Endpoints
 
-1. Label ~100-200 jewellery photos on roboflow.com (free), drawing a box
-   around the hallmark/HUID engraving on each. Export in "YOLOv8" format
-   into a `hallmark_dataset/` folder next to this README.
-2. Run `python train_yolo.py`. On an 8GB card this takes roughly 10-30
-   minutes for 100 epochs of YOLOv8n. If you hit a CUDA out-of-memory
-   error, lower `batch` in `train_yolo.py` (try 8, then 4).
-3. Copy the resulting `runs/hallmark_detector/weights/best.pt` into the
-   project root (same folder as this README).
-4. Restart the server (`uvicorn app.main:app --reload`). `ocr_service.py`
-   auto-detects `best.pt` and starts cropping to the hallmark region before
-   OCR. No other code changes needed - if the weights file isn't there, it
-   silently falls back to OCR-ing the full image, so the app never breaks.
+### 🔐 Authentication & Profile
+| Method | Endpoint | Description | Auth Required |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/auth/register` | Register new user account | No |
+| `POST` | `/api/auth/token` | OAuth2 Password login returning JWT bearer token | No |
+| `GET` | `/api/profile/me` | Get currently signed-in user and business profile | Yes (`Bearer Token`) |
+| `PUT` | `/api/business/profile` | Create or update MSME business information | Yes (`Bearer Token`) |
 
-## What's still a stub / what to build next
+### 💬 AI Assistant & Standards Matching
+| Method | Endpoint | Description | Auth Required |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/chat` | Send question to bilingual RAG assistant | No |
+| `POST` | `/api/recommend-standard` | Match product name to applicable IS standard | No |
+| `GET` | `/api/testing-facilities` | Search labs by Indian Standard code (`?standard=IS...`) | No |
 
-1. Ingest real IS standard text (replace `seed_data.py` sample docs) - see
-   bis.gov.in for the standards catalog; scrape/curate abstracts, chunk them
-   (~300-500 tokens), and call `rag.add_document()` for each chunk.
-2. Expand `ProductStandardMap` with more product keywords - this curated
-   table is what makes recommendations reliable, don't rely on RAG alone here.
-3. Add a YOLOv8 crop step in `ocr_service.py` before OCR for messier photos
-   (see the earlier discussion on Roboflow Universe jewellery datasets to
-   bootstrap a small training set).
-4. Wire `apscheduler` (already in requirements.txt) to a daily job that scans
-   `Certification.expiry_date` and sends reminders at 90/30/7 days out.
-5. Swap SQLite for Postgres+pgvector when you outgrow local dev.
+### 💰 Cost Calculator & Quotations
+| Method | Endpoint | Description | Auth Required |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/cost-calculator` | Calculate itemized compliance fees + MSME concession | No |
+| `POST` | `/api/quotations` | Save quotation request and generate quote reference | No |
+| `GET` | `/api/quotations` | List submitted quotation requests | No |
+
+### 💎 Hallmark & HUID Verification
+| Method | Endpoint | Description | Auth Required |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/verify-hallmark` | Upload jewellery image for EasyOCR/YOLO HUID scan | No |
+| `POST` | `/api/verify-hallmark/code` | Manually verify 6-character HUID & check purity match | No |
+
+### 📜 Certifications & Renewal Engine
+| Method | Endpoint | Description | Auth Required |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/certifications` | Add a license with issue & expiry dates | Yes (`Bearer Token`) |
+| `GET` | `/api/certifications` | List user licenses with 90/60/30-day countdowns | Yes (`Bearer Token`) |
+
+---
+
+## 🏋️‍♂️ Optional: Training Custom YOLOv8 Hallmark Detector
+
+If you want to enable automatic jewellery hallmark localization before OCR:
+
+1. Collect & label 100-200 jewellery images with hallmark bounding boxes on [Roboflow](https://roboflow.com).
+2. Export dataset in **YOLOv8** format into `hallmark_dataset/`.
+3. Run training:
+   ```bash
+   python train_yolo.py
+   ```
+4. Copy the trained weights `runs/hallmark_detector/weights/best.pt` to the project root:
+   ```bash
+   cp runs/hallmark_detector/weights/best.pt ./best.pt
+   ```
+5. `ocr_service.py` automatically detects `best.pt` and crops hallmark regions dynamically before running EasyOCR!
+
+---
+
+## 🗄️ Ingesting Official BIS Standards & Excel Files
+
+To ingest new PDF standards or official Excel lab directories:
+```bash
+python -m app.ingest_standards --data-dir path/to/standards_folder
+```
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Follow these steps:
+1. Fork the repository.
+2. Create your feature branch (`git checkout -b feature/NewFeature`).
+3. Commit your changes (`git commit -m "Add NewFeature"`).
+4. Push to the branch (`git push origin feature/NewFeature`).
+5. Open a Pull Request.
+
+---
+
+## 📄 License
+
+This project is open-source under the **MIT License**.
+
+---
+
+*Made with ❤️ for Indian MSMEs, Innovators, and Consumers by the BIS Sahayak Team.*

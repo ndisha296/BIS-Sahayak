@@ -14,6 +14,9 @@ GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "meta-llama/llama-3.1-8b-instruct:free")
 
+XAI_API_KEY = os.getenv("XAI_API_KEY") or (os.getenv("GROQ_API_KEY") if str(os.getenv("GROQ_API_KEY", "")).startswith("xai-") else None)
+XAI_MODEL = os.getenv("XAI_MODEL", "grok-2-latest")
+
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./bis_assistant.db")
 CHROMA_PERSIST_DIR = os.getenv("CHROMA_PERSIST_DIR", "./chroma_store")
 

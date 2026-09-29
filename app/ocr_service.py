@@ -16,7 +16,7 @@ import re
 import easyocr
 import cv2
 from sqlalchemy.orm import Session
-from .database import HallmarkRecord
+from .database import HallmarkRecord, lookup_huid
 from . import config
 
 _reader = easyocr.Reader(["en"], gpu=config.EASYOCR_GPU)
@@ -66,26 +66,6 @@ def extract_huid_from_image(image_path: str) -> str | None:
         if HUID_PATTERN.match(cleaned):
             return cleaned
     return None
-
-
-def lookup_huid(db: Session, huid: str) -> dict:
-    record = db.query(HallmarkRecord).filter(HallmarkRecord.huid == huid).first()
-    if not record:
-        return {
-            "verified": False,
-            "message": "HUID not found in registry. This may be counterfeit, "
-                       "mistyped, or misread - double check the engraving and "
-                       "cross-verify on the official BIS Care app.",
-        }
-    return {
-        "verified": True,
-        "huid": record.huid,
-        "purity": record.purity,
-        "jeweller_name": record.jeweller_name,
-        "hallmarking_centre": record.hallmarking_centre,
-        "hallmark_date": str(record.hallmark_date),
-        "article_type": record.article_type,
-    }
 
 
 def verify_hallmark_image(db: Session, image_path: str) -> dict:

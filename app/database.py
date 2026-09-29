@@ -1,5 +1,5 @@
-from sqlalchemy import create_engine, Column, Integer, String, Date, DateTime, ForeignKey
-from sqlalchemy.orm import sessionmaker, declarative_base, relationship
+from sqlalchemy import Boolean, create_engine, Column, Integer, String, Date, DateTime, ForeignKey
+from sqlalchemy.orm import Session, sessionmaker, declarative_base, relationship
 from datetime import datetime
 from .config import DATABASE_URL
 
@@ -35,6 +35,20 @@ class Certification(Base):
     owner = relationship("User", back_populates="certifications")
 
 
+class BusinessProfile(Base):
+    __tablename__ = "business_profiles"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
+    company_name = Column(String, nullable=True)
+    company_type = Column(String, nullable=True)
+    primary_product = Column(String, nullable=True)
+    udyam_registered = Column(Boolean, nullable=True)
+    journey_stage = Column(String, nullable=False, default="planning")
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    owner = relationship("User")
+
+
 class ProductStandardMap(Base):
     """Curated lookup: product keyword -> applicable IS standard + scheme.
     This is what makes recommendations reliable instead of pure LLM guessing."""
@@ -44,6 +58,19 @@ class ProductStandardMap(Base):
     is_standard = Column(String, nullable=False)       # e.g. "IS 16046"
     scheme = Column(String, nullable=False)             # e.g. "CRS"
     notes = Column(String, nullable=True)
+
+
+class TestingFacility(Base):
+    __tablename__ = "testing_facilities"
+    id = Column(Integer, primary_key=True, index=True)
+    lab_name = Column(String, nullable=False, index=True)
+    osl_code = Column(String, nullable=True)
+    indian_standard_no = Column(String, nullable=False, index=True)
+    product = Column(String, nullable=True)
+    grade_type_size = Column(String, nullable=True)
+    testing_charges = Column(String, nullable=True)
+    validity_date = Column(Date, nullable=True)
+    remarks = Column(String, nullable=True)
 
 
 class HallmarkRecord(Base):
@@ -56,6 +83,48 @@ class HallmarkRecord(Base):
     hallmarking_centre = Column(String, nullable=False)
     hallmark_date = Column(Date, nullable=False)
     article_type = Column(String, nullable=True)
+
+
+class QuotationRequest(Base):
+    """Quotation request for testing, certification, and standard compliance."""
+    __tablename__ = "quotation_requests"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    company_name = Column(String, nullable=False)
+    contact_name = Column(String, nullable=False)
+    email = Column(String, nullable=False, index=True)
+    phone = Column(String, nullable=True)
+    product_name = Column(String, nullable=False)
+    scheme = Column(String, nullable=False)             # ISI, CRS, FMCS, Hallmarking, Lab Testing
+    is_standard = Column(String, nullable=True)         # e.g. IS 16046
+    testing_scope = Column(String, nullable=True)       # e.g. Full Type Test
+    sample_quantity = Column(Integer, default=1)
+    is_msme = Column(Boolean, default=False)
+    estimated_cost = Column(Integer, nullable=True)     # Total estimated INR
+    notes = Column(String, nullable=True)
+    status = Column(String, default="submitted")        # submitted, in_review, quoted, completed
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+
+def lookup_huid(db: Session, huid: str) -> dict:
+    record = db.query(HallmarkRecord).filter(HallmarkRecord.huid == huid).first()
+    if not record:
+        return {
+            "verified": False,
+            "message": "HUID not found in registry. This may be counterfeit, "
+                       "mistyped, or misread - double check the engraving and "
+                       "cross-verify on the official BIS Care app.",
+        }
+    return {
+        "verified": True,
+        "huid": record.huid,
+        "purity": record.purity,
+        "jeweller_name": record.jeweller_name,
+        "hallmarking_centre": record.hallmarking_centre,
+        "hallmark_date": str(record.hallmark_date),
+        "article_type": record.article_type,
+    }
 
 
 def init_db():
