@@ -24,11 +24,17 @@ from app.database import (
 )
 from app.ocr_easyocr_quick import extract_huid
 from app.rag import answer_question
+from app.railway_pipeline import (
+    RESOLVED_MODEL_NAME,
+    handle_user_message,
+    reset_session,
+    transcribe_audio_payload,
+)
 from app.security import create_access_token, get_token_subject, hash_password, verify_password
 
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI(title="BIS Assistant API", version="1.0.0")
+app = FastAPI(title="BIS Sahayak & Statutory Compliance Engine API", version="5.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -47,7 +53,13 @@ def on_startup():
 
 
 class ChatRequest(BaseModel):
-    query: str
+    session_id: str | None = None
+    message: str | None = None
+    query: str | None = None
+
+
+class ResetSessionRequest(BaseModel):
+    session_id: str
 
 
 class AccountCreate(BaseModel):
@@ -526,12 +538,82 @@ def list_quotation_requests(
     }
 
 
-# 1. Left Pipeline: Text Q&A (RAG)
+@app.get("/")
+def root_status():
+    return {
+        "status": "online",
+        "model": RESOLVED_MODEL_NAME,
+        "voice_support": "whisper-large-v3-turbo",
+        "languages": ["English", "Hindi", "Marathi", "Gujarati", "Tamil", "Telugu", "Kannada", "Bengali"],
+        "docs": "/docs"
+    }
+
+
+# 1. Left Pipeline: Text Q&A with Topic Lock & Pan-Indian Multilingual Support
 @app.post("/api/chat")
 async def chat_endpoint(request: ChatRequest):
-    return answer_question(request.query)
+    query_text = (request.message or request.query or "").strip()
+    session_id = request.session_id or "default_session"
 
-# 2. Right Pipeline: Hallmark Verification
+    if not query_text:
+        return {
+            "session_id": session_id,
+            "answer": "Please enter a query regarding BIS standards, compliance requirements, or factory test equipment.",
+            "active_business": None,
+            "needs_confirmation": False,
+        }
+
+    res = handle_user_message(query_text, session_id)
+    return {
+        "session_id": session_id,
+        "answer": res["answer"],
+        "active_business": res.get("active_business"),
+        "needs_confirmation": res.get("needs_confirmation", False),
+    }
+
+
+# 2. Voice Chat: Transcribe Voice Audio with Groq Whisper & Route to Compliance Engine
+@app.post("/api/voice-chat")
+async def voice_chat_endpoint(session_id: str = Form(...), file: UploadFile = File(...)):
+    try:
+        audio_bytes = await file.read()
+        transcription = transcribe_audio_payload(audio_bytes, filename=file.filename or "recording.webm")
+
+        if transcription.startswith("[!]"):
+            return {
+                "session_id": session_id,
+                "transcription": "",
+                "answer": "Voice note could not be processed. Please speak clearly into your microphone or type your query in English, Hindi, or your regional language.",
+                "active_business": None,
+                "needs_confirmation": False
+            }
+
+        res = handle_user_message(transcription, session_id)
+        return {
+            "session_id": session_id,
+            "transcription": transcription,
+            "answer": res["answer"],
+            "active_business": res.get("active_business"),
+            "needs_confirmation": res.get("needs_confirmation", False)
+        }
+    except Exception as e:
+        return {
+            "session_id": session_id,
+            "transcription": "",
+            "answer": f"Voice Endpoint Error: {str(e)}",
+            "active_business": None,
+            "needs_confirmation": False
+        }
+
+
+# 3. Explicit Reset Session: Clear Topic Locks and Active Context
+@app.post("/api/reset-session")
+def reset_session_endpoint(req: ResetSessionRequest):
+    msg = reset_session(req.session_id)
+    return {"status": "success", "message": msg}
+
+
+# 4. Right Pipeline: Hallmark Verification
 @app.post("/api/verify-hallmark")
 async def verify_hallmark_endpoint(
     file: UploadFile = File(...),
@@ -585,6 +667,13 @@ def verify_hallmark_code(request: HuidCheckRequest, db: Session = Depends(get_db
         "verification": hallmark_result(db, request.huid.upper(), request.claimed_purity),
     }
 
+
 @app.get("/health")
 def health_check():
-    return {"status": "ok"}
+    return {
+        "status": "online",
+        "model": RESOLVED_MODEL_NAME,
+        "voice_support": "whisper-large-v3-turbo",
+        "languages": ["English", "Hindi", "Marathi", "Gujarati", "Tamil", "Telugu", "Kannada", "Bengali"],
+        "docs": "/docs"
+    }

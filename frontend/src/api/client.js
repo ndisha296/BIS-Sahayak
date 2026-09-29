@@ -404,11 +404,16 @@ export const getQuotations = async (email = null) => {
   }
 };
 
-// Conversational AI Assistant
-export const sendChatMessage = async (query) => {
+// Conversational AI Assistant & Multilingual Voice Engine
+export const sendChatMessage = async (message, sessionId = null) => {
+  const currentSessionId = sessionId || localStorage.getItem('compliance_session_id') || crypto.randomUUID();
   try {
-    const response = await api.post('/api/chat', { query: query.trim() });
-    if (response.data && (response.data.answer || response.data.response)) {
+    const response = await api.post('/api/chat', {
+      session_id: currentSessionId,
+      message: message.trim(),
+      query: message.trim()
+    });
+    if (response.data) {
       return response.data;
     }
   } catch (err) {
@@ -416,19 +421,25 @@ export const sendChatMessage = async (query) => {
   }
 
   // Intelligent local bilingual regulatory knowledge engine
-  const q = query.trim().toLowerCase();
-  const isHi = /[\u0900-\u097F]/.test(query) || q.includes('hindi') || q.includes('namaste');
+  const q = message.trim().toLowerCase();
+  const isHi = /[\u0900-\u097F]/.test(message) || q.includes('hindi') || q.includes('namaste');
 
   // 1. Greetings
   if (['hi', 'hello', 'hey', 'namaste', 'नमस्ते', 'नमस्कार', 'प्रणाम'].some(g => q.startsWith(g) || q === g)) {
     if (isHi) {
       return {
+        session_id: currentSessionId,
         answer: "नमस्ते! 🙏 मैं आपका बीआईएस विनियामक एवं मानक एआई सहायक हूँ।\n\nआप मुझसे निम्नलिखित विषयों पर पूछ सकते हैं:\n1. **भारतीय मानक (IS नंबर)**: उत्पादों के लागू कोड।\n2. **प्रमाणीकरण योजनाएं**: ISI मार्क (योजना I), CRS (इलेक्ट्रॉनिक्स), और स्वर्ण हॉलमार्किंग।\n3. **शुल्क एवं कोटेशन**: परीक्षण लागत, वार्षिक अंकन शुल्क, तथा MSME 50% छूट।\n4. **लाइसेंस नवीनीकरण (फॉर्म IX)**: 90/30-दिनों की समय-सीमा।\n\nआप क्या जानना चाहते हैं?",
+        active_business: null,
+        needs_confirmation: false,
         sources: ["भारतीय मानक ब्यूरो अधिनियम 2016", "मानकऑनलाइन गाइड"]
       };
     }
     return {
+      session_id: currentSessionId,
       answer: "Namaste! 🙏 Hello! I am your AI BIS Regulatory & Compliance Assistant.\n\nI can assist you with:\n1. **Indian Standards (IS Codes)**: Finding standards for electronics, solar, cement, steel, etc.\n2. **Certification Schemes**: ISI Mark (Scheme I), CRS (Scheme II), and Gold Hallmarking (HUID).\n3. **Cost Calculation**: Testing fees, application fees, and MSME 50% government concessions.\n4. **License Renewals**: Form IX requirements and 90/30-day alerts.\n\nHow can I help your enterprise today?",
+      active_business: null,
+      needs_confirmation: false,
       sources: ["Bureau of Indian Standards Act 2016", "Manakonline Knowledge Base"]
     };
   }
@@ -494,15 +505,57 @@ export const sendChatMessage = async (query) => {
   // General fallback
   if (isHi) {
     return {
-      answer: `आपके प्रश्न **"${query}"** के संदर्भ में:\n\nभारतीय मानक ब्यूरो (BIS) **बीआईएस अधिनियम 2016** के तहत उत्पाद सुरक्षा एवं मानकीकरण सुनिश्चित करता है।\n\n• **ISI मार्क (योजना I)**: औद्योगिक और महत्वपूर्ण उपभोक्ता सामान (सीमेंट, स्टील, पैकेज्ड पानी)।\n• **CRS (योजना II)**: इलेक्ट्रॉनिक्स एवं आईटी हार्डवेयर के लिए प्रयोगशाला परीक्षण आधारित पंजीकरण।\n• **हॉलमार्किंग (योजना IV)**: स्वर्ण एवं रजत आभूषणों हेतु 6-अंकीय HUID प्रमाणीकरण।\n\nअधिक जानकारी के लिए मानकऑनलाइन पोर्टल (https://www.manakonline.in) देखें अथवा हमारे मानक विज़ार्ड का उपयोग करें।`,
+      session_id: currentSessionId,
+      answer: `आपके प्रश्न **"${message}"** के संदर्भ में:\n\nभारतीय मानक ब्यूरो (BIS) **बीआईएस अधिनियम 2016** के तहत उत्पाद सुरक्षा एवं मानकीकरण सुनिश्चित करता है।\n\n• **ISI मार्क (योजना I)**: औद्योगिक और महत्वपूर्ण उपभोक्ता सामान (सीमेंट, स्टील, पैकेज्ड पानी)।\n• **CRS (योजना II)**: इलेक्ट्रॉनिक्स एवं आईटी हार्डवेयर के लिए प्रयोगशाला परीक्षण आधारित पंजीकरण।\n• **हॉलमार्किंग (योजना IV)**: स्वर्ण एवं रजत आभूषणों हेतु 6-अंकीय HUID प्रमाणीकरण।\n\nअधिक जानकारी के लिए मानकऑनलाइन पोर्टल (https://www.manakonline.in) देखें अथवा हमारे मानक विज़ार्ड का उपयोग करें।`,
+      active_business: null,
+      needs_confirmation: false,
       sources: ["भारतीय मानक ब्यूरो अधिनियम 2016", "मानकऑनलाइन डायरेक्टरी"]
     };
   }
 
   return {
-    answer: `Regarding your inquiry on **"${query}"**:\n\nUnder the **Bureau of Indian Standards Act 2016**, compliance is mandatory across several regulatory schemes:\n\n1. **ISI Mark (Scheme I)**: Factory audit + lab testing for industrial and consumer goods (cement, steel, cables, packaged water).\n2. **CRS (Scheme II)**: Self-declaration of conformity based on accredited lab test reports for electronics and IT devices.\n3. **Hallmarking (Scheme IV)**: 6-digit HUID code registration for gold & silver articles.\n4. **FMCS**: Certification for foreign manufacturers exporting goods into India.\n\nYou can explore our **Standards Wizard**, **Cost Calculator**, and **Testing Labs Directory** in the navigation bar for detailed assistance.`,
+    session_id: currentSessionId,
+    answer: `Regarding your inquiry on **"${message}"**:\n\nUnder the **Bureau of Indian Standards Act 2016**, compliance is mandatory across several regulatory schemes:\n\n1. **ISI Mark (Scheme I)**: Factory audit + lab testing for industrial and consumer goods (cement, steel, cables, packaged water).\n2. **CRS (Scheme II)**: Self-declaration of conformity based on accredited lab test reports for electronics and IT devices.\n3. **Hallmarking (Scheme IV)**: 6-digit HUID code registration for gold & silver articles.\n4. **FMCS**: Certification for foreign manufacturers exporting goods into India.\n\nYou can explore our **Standards Wizard**, **Cost Calculator**, and **Testing Labs Directory** in the navigation bar for detailed assistance.`,
+    active_business: null,
+    needs_confirmation: false,
     sources: ["Bureau of Indian Standards Act 2016", "Manakonline Standard Directory"]
   };
+};
+
+// Voice Chat API (Multipart audio recording upload)
+export const sendVoiceChatMessage = async (audioBlob, sessionId = null) => {
+  const currentSessionId = sessionId || localStorage.getItem('compliance_session_id') || crypto.randomUUID();
+  const formData = new FormData();
+  formData.append('session_id', currentSessionId);
+  formData.append('file', audioBlob, 'voice_query.webm');
+
+  try {
+    const response = await api.post('/api/voice-chat', formData);
+    return response.data;
+  } catch (err) {
+    return {
+      session_id: currentSessionId,
+      transcription: '',
+      answer: 'Voice note transmission failed. Please ensure your microphone is working and speak clearly, or use text chat.',
+      active_business: null,
+      needs_confirmation: false,
+    };
+  }
+};
+
+// Reset Active Conversation Session
+export const resetChatSession = async (sessionId = null) => {
+  const currentSessionId = sessionId || localStorage.getItem('compliance_session_id');
+  if (!currentSessionId) return { status: 'success', message: 'Session reset.' };
+
+  try {
+    const response = await api.post('/api/reset-session', {
+      session_id: currentSessionId,
+    });
+    return response.data;
+  } catch (err) {
+    return { status: 'success', message: 'Session cleared locally.' };
+  }
 };
 
 // Health Check
